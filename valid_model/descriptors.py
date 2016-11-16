@@ -1,9 +1,7 @@
 from datetime import datetime, timedelta
-import warnings
 from .exc import ValidationError
 from .base import Object, Generic
 from .utils import is_descriptor
-
 
 class EmbeddedObject(Generic):
 	def __init__(self, class_obj):
@@ -18,57 +16,6 @@ class EmbeddedObject(Generic):
 			value = self.class_obj(**value)
 		return Generic.__set__(self, instance, value)
 
-class ObjectList(Generic): # pragma: no cover
-	def __init__(self, class_obj, mutator=None):
-		warnings.warn("ObjectList(class_obj) should be replaced with List(value=EmbeddedObject(class_obj))", DeprecationWarning)
-		self.class_obj = class_obj
-		validator = lambda x: all(isinstance(i, class_obj) for i in x)
-		Generic.__init__(
-			self, default=list, validator=validator, mutator=mutator
-		)
-
-	def __set__(self, instance, value):
-		if not isinstance(value, list):
-			raise ValidationError("{} is not a list".format(value))
-		new_value = []
-		for v in value:
-			if isinstance(v, dict):
-				new_value.append(self.class_obj(**v))
-			elif isinstance(v, self.class_obj):
-				new_value.append(v)
-			else:
-				raise ValidationError(
-					"Cannot convert from {} to {}".format(
-						v.__class__.__name__, self.class_obj.__name__
-					)
-				)
-		return Generic.__set__(self, instance, new_value)
-
-class ObjectDict(Generic): # pragma: no cover
-	def __init__(self, class_obj, mutator=None):
-		warnings.warn("ObjectDict(class_obj) should be replaced with Dict(value=EmbeddedObject(class_obj))", DeprecationWarning)
-		self.class_obj = class_obj
-		validator = lambda x: all(isinstance(i, class_obj) for i in x.itervalues())
-		Generic.__init__(
-			self, default=dict, validator=validator, mutator=mutator
-		)
-
-	def __set__(self, instance, value):
-		if not isinstance(value, dict):
-			raise ValidationError("{!r} is not a dict".format(value))
-		new_value = {}
-		for k, v in value.iteritems():
-			if isinstance(v, dict):
-				new_value[k] = self.class_obj(**v)
-			elif isinstance(v, self.class_obj):
-				new_value[k] = v
-			else:
-				raise ValidationError(
-					"Cannot convert from {} to {}".format(
-						v.__class__.__name__, self.class_obj.__name__
-					)
-				)
-		return Generic.__set__(self, instance, new_value)
 
 class String(Generic):
 	"""

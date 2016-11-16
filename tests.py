@@ -262,62 +262,6 @@ class TestEmbeddedObject(unittest.TestCase):
 		del instance.test
 		self.assertEquals(instance.test, None)
 
-class TestObjectList(unittest.TestCase):
-	@staticmethod
-	def _make_one(mutator=None):
-		from valid_model.descriptors import List, EmbeddedObject
-		from valid_model import Object
-		class Foo(Object):
-			test = List(value=EmbeddedObject(Object), mutator=mutator)
-		return Foo()
-
-	def test___set___validator(self):
-		from valid_model import ValidationError
-		instance = self._make_one()
-		self.assertRaises(ValidationError, setattr, instance, 'test', 10)
-		self.assertRaises(ValidationError, setattr, instance, 'test', [10])
-
-	def test___delete__(self):
-		instance = self._make_one()
-		del instance.test
-		self.assertEquals(instance.test, None)
-
-class TestObjectDict(unittest.TestCase):
-	@staticmethod
-	def _make_one(mutator=None):
-		from valid_model.descriptors import EmbeddedObject, Dict
-		from valid_model import Object
-		class Foo(Object):
-			test = Dict(value=EmbeddedObject(Object), mutator=mutator)
-		return Foo()
-
-	@staticmethod
-	def _make_two(mutator=None):
-		from valid_model.descriptors import Dict, Integer
-		from valid_model import Object
-		class Foo(Object):
-			test = Dict(key=Integer(validator=lambda x: x > 5), mutator=mutator)
-		return Foo()
-
-	def test___set___validator(self):
-		from valid_model import ValidationError
-		instance = self._make_one()
-		nested_instance = self._make_one()
-		self.assertRaises(ValidationError, setattr, instance, 'test', 10)
-		self.assertRaises(ValidationError, setattr, instance, 'test', {'foo': 10})
-		instance.test = {'foo': nested_instance}
-
-		instance2 = self._make_two()
-		self.assertRaises(ValidationError, setattr, instance2, 'test', 10)
-		self.assertRaises(ValidationError, setattr, instance2, 'test', {'abc': 10})
-		self.assertRaises(ValidationError, setattr, instance2, 'test', {2: 10})
-		instance2.test[8] = 5
-
-	def test___delete__(self):
-		instance = self._make_one()
-		del instance.test
-		self.assertEquals(instance.test, None)
-
 class TestString(unittest.TestCase):
 	@staticmethod
 	def _make_one(default=None, validator=None, mutator=None):
