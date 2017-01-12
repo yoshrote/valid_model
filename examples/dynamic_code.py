@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import inspect
 from valid_model.base import Object, ObjectMeta
 from valid_model.descriptors import (
-    String, Integer, Bool, Dict, List, TimeDelta, DateTime, Set, Generic
+    String, Integer, Bool, Dict, List, TimeDelta, DateTime, Set, EmbededObject, Float, Generic
 )
 
 class ObjectPrinter(object):
@@ -69,6 +69,7 @@ class ObjectMaker(object):
         'timedelta': TimeDelta,
         'map': Dict,
         'list': List,
+        'array': List,
         'set': Set,
     }
     DEFAULT_MAP = {
@@ -81,6 +82,40 @@ class ObjectMaker(object):
         'list': lambda x: x,
         'set': lambda x: x,
     }
+    JSON_SCHEME_MAP = {
+        'boolean': Bool,
+        'array': List,
+        'object': EmbededObject,
+        'number': Float,
+        'string': String,
+    }
+    def __init__(self, schema_fetcher, registry=None):
+        self.registry = registry or {}
+        self.schema_fetcher = schema_fetcher
+
+    def get_class(self, name):
+        try:
+            klass = self.registry[name]
+        except KeyError:
+            schema = self.schema_fetcher.get(name)
+            if not schema:
+                raise RuntimeError('could not fetch schema for {!r}'.format(name))
+            klass = self.registry[name] = self.create_class_from_json_schema(name, schema)
+        return klass
+
+    @classmethod
+    def create_class_from_json_schema(cls, name, schema):
+        assert schema['type'] == 'object', "Only supporting object creation"
+        required_fields = set(schema.get('required', []))
+        attrs = {}
+        for prop_name, prop_spec in schema['properties'].iteritems():
+            attrs[prop_name] = cls.descriptor_from_schema(prop_spec, required=prop_name in required_fields)
+        return cls.create_class(name, attrs)
+
+    @classmethod
+    def descriptor_from_schema(cls, spec, required=False):
+        klass = cls.JSON_SCHEME_MAP[spec['type']]
+
     @staticmethod
     def create_class(name, attrs):
         return ObjectMeta.__new__(ObjectMeta, name, (Object,), dict(attrs))
