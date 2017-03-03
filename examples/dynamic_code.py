@@ -1,8 +1,14 @@
 """
 Generate classes from a specification and generate the class declaration code
 """
-from datetime import datetime, timedelta
+import re
 import inspect
+from datetime import datetime, timedelta
+
+import rfc3987
+from strict_rfc3339 import validate_rfc3339
+from validate_email import validate_email
+
 from valid_model.base import Object, ObjectMeta
 from valid_model.descriptors import (
     String, Integer, Bool, Dict, List, TimeDelta, DateTime, Set, EmbededObject, Float, Generic
@@ -60,6 +66,352 @@ class ObjectPrinter(object):
 def print_class(klass):
     return ObjectPrinter.print_class(klass)
 
+
+class JSONBase(object):
+    def __init__(self, name=None, description=None, **kwargs):
+        self.name = name
+        self.description = description
+        super(JSONBase, self).__init__()
+
+    def __call__(self, value):
+        return self.validate()
+
+    def validate(self):
+        raise NotImplementedError('validate')
+
+    def __repr__(self):
+        return u'{}({})'.format(
+            self.__class__.__name,
+            u', '.join(
+                u'{}={}'.format(k.ltrim('_'), repr(v))
+                for k, v in vars(self)
+                if not callable(v) and k.startswith('_')
+            )
+        )
+
+class JSONNumber(JSONBase):
+    def __init__(self, multipleOf=None, maximum=None, exclusiveMaximum=None, enum=None, **kwargs)
+        self._multipleOf = multipleOf
+        self._maximum = maximum
+        self._exclusiveMaximum = exclusiveMaximum
+        self._enum = enum
+        super(JSONNumber, self).__init__(**kwargs)
+
+    def enum(self, value):
+        if self._enum is not None:
+            return value in self._enum
+        else:
+            return True
+
+    def validate(self, value):
+        return all(
+            self.multipleOf(value),
+            self.maximum(value),
+            self.minimum(value),
+            self.enum(value),
+        )
+
+    def multipleOf(self, value):
+        if self._multipleOf is not None:
+            return value % self._multipleOf == 0
+        else:
+            return True
+
+    def maximum(self, value):
+        if self._maximum is not None:
+            if self._exclusive_maximum:
+                return value < self._maximum
+            else:
+                return value <= self._maximum
+        else:
+            return True
+
+    def minimum(self, value):
+        if self._minimum is not None:
+            if self._exclusive_minimum:
+                return value > self._minimum
+            else:
+                return value >= self._minimum
+        else:
+            return True
+
+class JSONString(JSONBase):
+    FORMATS = {
+        'date-time': lambda x: validate_rfc3339(x),
+        'email': lambda x: validate_email(x),
+        'hostname': lambda x: rfc3987.match(x, 'host') is not None
+        'ipv4': lambda x: rfc3987.match(x, 'IPv4address') is not None
+        'ipv6': lambda x: rfc3987.match(x, 'IPv6address') is not None
+        'uri': lambda x: rfc3987.match(x, 'URI') is not None
+        'uriref': lambda x: rfc3987.match(x, 'URI_reference') is not None
+    }
+
+    def __init__(self, default=None, maxLength=None, minLength=None, pattern=None, format_=None, enum=None, **kwargs):
+        self._maxLength = maxLength
+        self._minLength = minLength
+        self._pattern = re.compile(pattern)
+        self._format = format_
+        self._enum = enum
+        super(JSONString, self).__init__(**kwargs)
+
+    def validate(self, value):
+        return all(
+            self.maxLength(value),
+            self.minLength(value).
+            self.pattern(value),
+            self.format(value),
+            self.enum(value),
+        )
+
+    def enum(self, value):
+        if self._enum is not None:
+            return value in self._enum
+        else:
+            return True
+
+    def maxLength(self, value):
+        if self._maxLength is not None:
+            return len(value) <= self._maxLength
+        else:
+            return True
+
+    def minLength(self, value):
+        if self._minLength is not None:
+            return len(value) >= self._minLength
+        else:
+            return True
+
+    def pattern(self, value):
+        if self._pattern is not None:
+            return self._pattern.search(value) is not None
+        else:
+            return True
+
+    def format(self, value):
+        if self._format is not None:
+            return self.FORMATS[self._format](value)
+        else:
+            return True
+
+class JSONArray(JSONBase):
+    def __init__(self, default=None, maxItems=None, minItems=None, uniqueItems=None, allOf=None, anyOf=None, oneOf=None, **kwargs):
+        self._maxItems = maxItems
+        self._minItems = minItems
+        self._uniqueItems = uniqueItems
+        self._allOf = allOf
+        self._anyOf = anyOf
+        self._oneOf = oneOf
+        super(JSONArray, self).__init__(**kwargs)
+
+    def _undefined_properties(self, value):
+        keys = set(value.keys())
+        keys = keys - set(self._properties or [])
+        if self._patternProperties:
+            for pattern in self._patternProperties:
+                if self._pattern_matches(pattern, value):
+                    keys.remove(key)
+        return keys
+
+    def validate(self, value):
+        return all(
+            self.maxItems(value),
+            self.minItems(value),
+            self.uniqueItems(value),
+            self.allOf(value),
+            self.anyOf(value),
+            self.oneOf(value),
+            self.items(value),
+        )
+
+    def items(self, value)
+        """
+        items and additionalItems
+        MUST be a valid JSON Schema.
+        The value of "items" MUST be either a schema or array of schemas.
+        Successful validation of an array instance with regards to these two keywords is determined as follows:
+        if "items" is not present, or its value is an object, validation of the instance always succeeds, regardless of the value of "additionalItems";
+        if the value of "additionalItems" is boolean value true or an object, validation of the instance always succeeds;
+        if the value of "additionalItems" is boolean value false and the value of "items" is an array, the instance is valid if its size is less than, or equal to, the size of "items".
+        If either keyword is absent, it may be considered present with an empty schema.
+        """
+        if self._items is None:
+            return True
+
+        if isinstance(self._items, list):
+            if len(value) < len(self._items):
+                return False
+            for item, value_piece in zip(self._items):
+                if not item.validate(value_piece):
+                    return False
+        elif self._items:
+            for value_piece in value:
+                if not self._items.validate(value_piece):
+                    return False
+
+        if self._additionalItems is False and isinstance(self._items, list) and len(self._items) != len(value):
+            return False
+        elif not isinstance(self._items, list) and self._additionalItems is False:
+            raise ValueError('schema should not have an object for items')
+
+        return True
+
+    def maxItems(self, value):
+        if self._maxItems is not None:
+            return len(value) <= self._maxItems
+        else:
+            return True
+
+    def minItems(self, value):
+        if self._minItems is not None:
+            return len(value) >= self._minItems
+        else:
+            return True
+
+    def uniqueItems(self, value):
+        if self._uniqueItems is not None:
+            return len(value) == len(set(value))
+        else:
+            return True
+
+    def allOf(self, value):
+        if self._allOf is not None:
+            try:
+                for v in value:
+                    self._allOf.__set__(Object(), v)
+            except ValidationError:
+                return False
+            else:
+                return True
+        else:
+            return True
+
+    def anyOf(self, value):
+        if self._anyOf is not None:
+            for v in value:
+                try:
+                    self._anyOf.__set__(Object(), v)
+                except ValidationError:
+                    pass
+                else:
+                    return True
+            return False
+        else:
+            return True
+
+    def oneOf(self, value):
+        if self._oneOf is not None:
+            counter = 0
+            for v in value:
+                try:
+                    self._oneOf.__set__(Object(), v)
+                except ValidationError:
+                    pass
+                else:
+                    counter += 1
+            return counter == 1
+        else:
+            return True
+
+class JSONObject(JSONBase):
+    def __init__(self, required=None, properties=None, patternProperties=None, additionalProperties=None, **kwargs):
+        self._properties = properties
+        self._patternProperties
+        self._additionalProperties = additionalProperties
+        self._required = required
+        super(JSONObject, self).__init__(**kwargs)
+
+    def __call__(self, value):
+        if self._additionalProperties is not None:
+            if self._additionalProperties is True:
+                return True
+
+            undefined_properties = self._undefined_properties(value)
+            if self._additionalProperties is False:
+                return not undefined_properties
+            elif not all(self._additionalProperties.validate(getattr(value, property_)) for property_ in undefined_properties):
+                return False
+
+        return self.validate(value)
+
+    def _undefined_properties(self, value):
+        keys = set(value.keys())
+        keys = keys - set(self._properties or [])
+        if self._patternProperties:
+            for pattern in self._patternProperties:
+                if self._pattern_matches(pattern, value):
+                    keys.remove(key)
+        return keys
+
+    def _pattern_matches(self, pattern, value):
+        matches = []
+        for key in value.keys():
+            if re.search(pattern, key) is not None:
+                matches.append(key)
+        return matches
+
+    def validate(self, value):
+        return all(
+            self.required(value),
+            self.maxProperties(value),
+            self.minProperties(value),
+            self.properties(value),
+            self.patternProperties(value),
+        )
+
+    def properties(self, value):
+        if self._properties is not None:
+            for key, rule in self._properties.items()
+                rule.validate(getattr(value, key))
+
+    def patternProperties(self, value):
+        if self._patternProperties is not None:
+            for pattern, rule in self._patternProperties.items():
+                for key in self._pattern_matches(pattern, value):
+                    if not rule.validate(value):
+                        return False
+
+        return True
+
+    def maxProperties(self, value):
+        if self._maxProperties is not None:
+            return len(value) <= self._maxProperties
+        else:
+            return True
+
+    def minProperties(self, value):
+        if self._minProperties is not None:
+            return len(value) >= self._minProperties
+        else:
+            return True
+
+    def required(self, value):
+        if self._required is not None:
+            return all(hasattr(value, req_key) for req_key in self._required)
+        else:
+            return True
+
+'''
+5.19. dependencies
+    This keyword specifies rules that are evaluated if the instance is an object and contains a certain property.
+    This keyword's value MUST be an object. Each property specifies a dependency. Each dependency value MUST be an object or an array.
+    If the dependency value is an object, it MUST be a valid JSON Schema. If the dependency key is a property in the instance, the dependency value must validate against the entire instance.
+    If the dependency value is an array, it MUST have at least one element, each element MUST be a string, and elements in the array MUST be unique. If the dependency key is a property in the instance, each of the items in the dependency value must be a property that exists in the instance.
+
+5.25. not
+    This keyword's value MUST be an object. This object MUST be a valid JSON Schema.
+    An instance is valid against this keyword if it fails to validate successfully against the schema defined by this keyword.
+
+5.26. definitions
+    This keyword's value MUST be an object. Each member value of this object MUST be a valid JSON Schema.
+    This keyword plays no role in validation per se. Its role is to provide a standardized location for schema authors to inline JSON Schemas into a more general schema.
+
+dependencies
+not
+definitions
+title
+description
+'''
+
 class ObjectMaker(object):
     KLASS_MAP = {
         'string': String,
@@ -85,9 +437,15 @@ class ObjectMaker(object):
     JSON_SCHEME_MAP = {
         'boolean': Bool,
         'array': List,
-        'object': EmbededObject,
+        'object': Dict,
         'number': Float,
         'string': String,
+    }
+    JSON_VALIDATORS = {
+        'array': JSONArray,
+        'string': JSONString,
+        'number': JSONNumber,
+        'object': JSONObject,
     }
     def __init__(self, schema_fetcher, registry=None):
         self.registry = registry or {}
@@ -115,6 +473,10 @@ class ObjectMaker(object):
     @classmethod
     def descriptor_from_schema(cls, spec, required=False):
         klass = cls.JSON_SCHEME_MAP[spec['type']]
+        klass_kwargs = {'default':spec.get('default'), 'nullable':not required}
+        if spec['type'] in cls.JSON_VALIDATORS:
+            klass_kwargs['validator'] = cls.JSON_VALIDATORS[spec['type']](**spec)
+        return klass(**klass_kwargs)
 
     @staticmethod
     def create_class(name, attrs):
