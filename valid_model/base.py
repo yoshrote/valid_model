@@ -38,6 +38,7 @@ class Generic(object):
     name = None
 
     def __init__(self, default=None, validator=None, mutator=None, nullable=True):
+        self.extra = {} # For use with hooks
         self.default = default
         self.nullable = nullable
         if validator is None:
@@ -95,6 +96,7 @@ class ObjectMeta(type):
         field_names = set()
         for attr, value in attrs.iteritems():
             if isinstance(value, Generic):
+                mcs.hook(name, attrs, attr, value)
                 value.name = attr
                 attrs[attr] = value
                 field_names.add(attr)
@@ -103,12 +105,16 @@ class ObjectMeta(type):
             parent = base.__mro__[0]
             for attr, value in vars(parent).iteritems():
                 if isinstance(value, Generic) and attr not in attrs:
+                    mcs.hook(name, vars(parent), attr, value)
                     value.name = attr
                     attrs[attr] = value
                     field_names.add(attr)
         attrs['field_names'] = field_names
         return type.__new__(mcs, name, bases, attrs)
 
+    @classmethod
+    def hook(mcs, name, attrs, attr, value):
+        pass
 
 class Object(object):
     """
