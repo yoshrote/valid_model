@@ -22,7 +22,7 @@ class SQLBase(object):
         if not isinstance(data, (SQLBase, Generic)):
             yield data
         elif isinstance(data, SQLBase):
-            for value in data.values():
+            for value in data.bound_values():
                 yield value
         raise StopIteration()
 
@@ -114,10 +114,43 @@ class Select(SQLBase):
 
     @property
     def query(self):
-        return self.__unicode__(), self.values()
+        return self.__unicode__(), self.bound_values()
 
-    def values(self):
-        return self._where.values() if self._where else []
+    def bound_values(self):
+        return self._where.bound_values() if self._where else []
+
+    def __str__(self):
+        return self.__unicode__().encode('utf-8')
+
+
+class Delete(SQLBase):
+    def __init__(self):
+        self._from = None
+        self._where = None
+
+    def where(self, where):
+        self._where = where
+        return self
+
+    def from_(self, from_):
+        self._from = from_
+        return self
+
+    def __unicode__(self):
+        statement = """DELETE FROM {from_}""".format(
+            from_=self._from)
+        if self._where is not None:
+            statement = "{statement} WHERE {where}".format(
+                statement=statement,
+                where=self._where)
+        return statement
+
+    @property
+    def query(self):
+        return self.__unicode__(), self.bound_values()
+
+    def bound_values(self):
+        return self._where.bound_values() if self._where else []
 
     def __str__(self):
         return self.__unicode__().encode('utf-8')
@@ -148,9 +181,9 @@ class Where(SQLBase):
     def __str__(self):
         return self.__unicode__().encode('utf-8')
 
-    def values(self):
+    def bound_values(self):
         return flatten(
-            e.values()
+            e.bound_values()
             for e in self._expressions
             if not isinstance(e, basestring)
         )
@@ -170,7 +203,7 @@ class Expression(SQLBase):
     def __str__(self):
         return self.__unicode__().encode('utf-8')
 
-    def values(self):
+    def bound_values(self):
         for value in self.expression_values(self.lhs):
             yield value
         for value in self.expression_values(self.rhs):
@@ -190,7 +223,7 @@ class UnaryExpression(SQLBase):
     def __str__(self):
         return self.__unicode__().encode('utf-8')
 
-    def values(self):
+    def bound_values(self):
         for value in self.expression_values(self.rhs):
             yield value
         raise StopIteration()
@@ -207,7 +240,7 @@ class Function(SQLBase):
     def __str__(self):
         return self.__unicode__().encode('utf-8')
 
-    def values(self):
+    def bound_values(self):
         for value in self.expression_values(self.rhs):
             yield value
         raise StopIteration()
@@ -237,6 +270,43 @@ class All(SQLBase):
 
     def __str__(self):
         return self.__unicode__().encode('utf-8')
+
+
+class Insert(SQLBase):
+    def __init__(self, tablename):
+        self._into = tablename
+        self._values = {}
+
+    def values(self, **kwargs):
+        self._values.update(kwargs)
+        return self
+
+    def __unicode__(self):
+        statement = """INSERT INTO {into}""".format(
+            into=self._into)
+        columns = []
+        values = []
+        for k, v in sorted(self._values.iteritems()):
+            columns.append(unicode(k))
+            values.append(self.expression_param(v))
+
+        statement = "{statement} ({columns}) VALUES ({values})".format(
+            statement=statement,
+            columns=", ".join(columns),
+            values=", ".join(values))
+
+        return statement
+
+    @property
+    def query(self):
+        return self.__unicode__(), self.bound_values()
+
+    def bound_values(self):
+        return [v for _, v in sorted(self._values.iteritems())]
+
+    def __str__(self):
+        return self.__unicode__().encode('utf-8')
+
 
 
 class SQLObjectMeta(ObjectMeta):
