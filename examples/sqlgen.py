@@ -9,7 +9,7 @@ def flatten(l):
 
 class SQLBase(object):
     @staticmethod
-    def expression_fragment(data):
+    def expression_param(data):
         if isinstance(data, Generic):
             return data.extra['name']
         elif isinstance(data, SQLBase):
@@ -18,7 +18,7 @@ class SQLBase(object):
             return "?"
 
     @staticmethod
-    def yield_fragment(data):
+    def expression_values(data):
         if not isinstance(data, (SQLBase, Generic)):
             yield data
         elif isinstance(data, SQLBase):
@@ -32,6 +32,24 @@ class Select(SQLBase):
         self._columns = list(columns)
         self._from = None
         self._where = None
+        self._group_by = None
+        self._order_by = None
+
+    @staticmethod
+    def format_columns(column_list):
+        seen = set()
+        columns = []
+        for c in column_list:
+            c_str = unicode(
+                c
+                if not isinstance(c, Generic)
+                else c.extra['name'])
+            for part in c_str.split(", "):
+                if part not in seen:
+                    columns.append(part)
+                    seen.add(part)
+        columns = ', '.join(columns)
+        return columns
 
     def columes(self, *columns):
         self._columns.extend(columns)
@@ -45,20 +63,34 @@ class Select(SQLBase):
         self._from = from_
         return self
 
+    def group_by(self, *columns):
+        self._group_by = columns
+        return self
+
+    def order_by(self, *order_expressions):
+        order_by = []
+        for expr in order_expressions:
+            if isinstance(expr, (tuple, list)):
+                column, direction = expr
+                direction = direction.upper()
+                if direction not in ("ASC", "DESC"):
+                    raise ValueError("Invalid sort direction: {!r}".format(
+                        direction))
+            else:
+                column = expr
+                direction = "ASC"
+            if isinstance(column, Generic):
+                column = column.extra['name']
+            elif not isinstance(column, basestring):
+                raise ValueError("Invalid value for column: {!r}".format(
+                    column))
+
+            order_by.append((column, direction))
+        self._order_by = order_by
+        return self
+
     def __unicode__(self):
-        seen = set()
-        columns = []
-        for c in self._columns:
-            c_str = unicode(
-                c
-                if not isinstance(c, Generic)
-                else c.extra['name']
-            )
-            for part in c_str.split(", "):
-                if part not in seen:
-                    columns.append(part)
-                    seen.add(part)
-        columns = ', '.join(columns)
+        columns = self.format_columns(self._columns)
         statement = """SELECT {columns} FROM {from_}""".format(
             columns=columns,
             from_=self._from)
@@ -66,6 +98,18 @@ class Select(SQLBase):
             statement = "{statement} WHERE {where}".format(
                 statement=statement,
                 where=self._where)
+        if self._group_by is not None:
+            group_by = self.format_columns(self._group_by)
+            statement = "{statement} GROUP BY {group_by}".format(
+                statement=statement,
+                group_by=group_by)
+        if self._order_by is not None:
+            order_by = ", ".join([
+                "{} {}".format(col, direction)
+                for col, direction in self._order_by])
+            statement = "{statement} ORDER BY {order_by}".format(
+                statement=statement,
+                order_by=order_by)
         return statement
 
     @property
@@ -119,17 +163,17 @@ class Expression(SQLBase):
         self.rhs = rhs
 
     def __unicode__(self):
-        lhs = self.expression_fragment(self.lhs)
-        rhs = self.expression_fragment(self.rhs)
+        lhs = self.expression_param(self.lhs)
+        rhs = self.expression_param(self.rhs)
         return " ".join(map(unicode, (lhs, self.operation, rhs)))
 
     def __str__(self):
         return self.__unicode__().encode('utf-8')
 
     def values(self):
-        for value in self.yield_fragment(self.lhs):
+        for value in self.expression_values(self.lhs):
             yield value
-        for value in self.yield_fragment(self.rhs):
+        for value in self.expression_values(self.rhs):
             yield value
         raise StopIteration()
 
@@ -140,14 +184,14 @@ class UnaryExpression(SQLBase):
         self.rhs = rhs
 
     def __unicode__(self):
-        rhs = self.expression_fragment(self.rhs)
+        rhs = self.expression_param(self.rhs)
         return " ".join(map(unicode, (self.operation, rhs)))
 
     def __str__(self):
         return self.__unicode__().encode('utf-8')
 
     def values(self):
-        for value in self.yield_fragment(self.rhs):
+        for value in self.expression_values(self.rhs):
             yield value
         raise StopIteration()
 
@@ -158,14 +202,14 @@ class Function(SQLBase):
         self.rhs = rhs
 
     def __unicode__(self):
-        rhs = self.expression_fragment(self.rhs)
+        rhs = self.expression_param(self.rhs)
         return "{}({})".format(self.function, rhs)
 
     def __str__(self):
         return self.__unicode__().encode('utf-8')
 
     def values(self):
-        for value in self.yield_fragment(self.rhs):
+        for value in self.expression_values(self.rhs):
             yield value
         raise StopIteration()
 
