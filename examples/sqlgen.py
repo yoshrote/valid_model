@@ -202,8 +202,7 @@ class Function(SQLBase):
         self.rhs = rhs
 
     def __unicode__(self):
-        rhs = self.expression_param(self.rhs)
-        return "{}({})".format(self.function, rhs)
+        return "{}({})".format(self.function, self.rhs)
 
     def __str__(self):
         return self.__unicode__().encode('utf-8')
@@ -227,6 +226,14 @@ class From(SQLBase):
 
     def __unicode__(self):
         return " ".join(map(unicode, self._tables))
+
+    def __str__(self):
+        return self.__unicode__().encode('utf-8')
+
+
+class All(SQLBase):
+    def __unicode__(self):
+        return '*'
 
     def __str__(self):
         return self.__unicode__().encode('utf-8')
@@ -304,6 +311,15 @@ def main():
     query, params = foo.query
     print query
     print params
+    print '*' * 80
+
+    bar = Select(
+        Car.wheels, Function('COUNT', All())
+    ).from_(From('test_cars')).order_by(Car.wheels).group_by(Car.wheels)
+    query, params = bar.query
+    print query
+    print params
+
 
 if __name__ == '__main__':
     main()
