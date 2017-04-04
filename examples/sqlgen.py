@@ -276,24 +276,39 @@ class Insert(SQLBase):
     def __init__(self, tablename):
         self._into = tablename
         self._values = {}
+        self._select = None
+        self._columns = None
 
-    def values(self, **kwargs):
+    def values(self, kwargs):
         self._values.update(kwargs)
+        return self
+
+    def from_select(self, columns, select_query):
+        self._columns = columns
+        self._select = select_query
         return self
 
     def __unicode__(self):
         statement = """INSERT INTO {into}""".format(
             into=self._into)
-        columns = []
-        values = []
-        for k, v in sorted(self._values.iteritems()):
-            columns.append(unicode(k))
-            values.append(self.expression_param(v))
 
-        statement = "{statement} ({columns}) VALUES ({values})".format(
-            statement=statement,
-            columns=", ".join(columns),
-            values=", ".join(values))
+        if self._values:
+            columns = []
+            values = []
+            for k, v in sorted(self._values.iteritems()):
+                columns.append(unicode(k))
+                values.append(self.expression_param(v))
+
+            statement = "{statement} ({columns}) VALUES ({values})".format(
+                statement=statement,
+                columns=", ".join(columns),
+                values=", ".join(values))
+        elif self._select is not None:
+            columns = ", ".join([unicode(c) for c in self._columns])
+            statement = "{statement} ({columns}) {select}".format(
+                statement=statement,
+                columns=columns,
+                select=self._select)
 
         return statement
 
@@ -302,11 +317,13 @@ class Insert(SQLBase):
         return self.__unicode__(), self.bound_values()
 
     def bound_values(self):
-        return [v for _, v in sorted(self._values.iteritems())]
+        if self._values:
+            return [v for _, v in sorted(self._values.iteritems())]
+        elif self._select:
+            return list(self._select.bound_values())
 
     def __str__(self):
         return self.__unicode__().encode('utf-8')
-
 
 
 class SQLObjectMeta(ObjectMeta):
@@ -389,7 +406,29 @@ def main():
     query, params = bar.query
     print query
     print params
+    print '*' * 80
 
+    delq = Delete().from_(From('test_cars')).where(
+        Where(Expression(Car.wheels, '<', 4))
+    )
+    query, params = delq.query
+    print query
+    print params
+    print '*' * 80
+
+    insert_basic = Insert(From('test_cars')).values(
+        {Car.wheels: 5, Car.model: "foo"}
+    )
+    query, params = insert_basic.query
+    print query
+    print params
+    print '*' * 80
+
+    insert_select = Insert(From('test_cars')).from_select((Car.model, ), subq)
+    query, params = insert_select.query
+    print query
+    print params
+    print '*' * 80
 
 if __name__ == '__main__':
     main()
