@@ -11,7 +11,7 @@ from validate_email import validate_email
 
 from valid_model.base import Object, ObjectMeta
 from valid_model.descriptors import (
-    String, Integer, Bool, Dict, List, TimeDelta, DateTime, Set, EmbededObject, Float, Generic
+    String, Integer, Bool, Dict, List, TimeDelta, DateTime, Set, EmbeddedObject, Float, Generic
 )
 
 class ObjectPrinter(object):
@@ -90,7 +90,7 @@ class JSONBase(object):
         )
 
 class JSONNumber(JSONBase):
-    def __init__(self, multipleOf=None, maximum=None, exclusiveMaximum=None, enum=None, **kwargs)
+    def __init__(self, multipleOf=None, maximum=None, exclusiveMaximum=None, enum=None, **kwargs):
         self._multipleOf = multipleOf
         self._maximum = maximum
         self._exclusiveMaximum = exclusiveMaximum
@@ -139,10 +139,10 @@ class JSONString(JSONBase):
     FORMATS = {
         'date-time': lambda x: validate_rfc3339(x),
         'email': lambda x: validate_email(x),
-        'hostname': lambda x: rfc3987.match(x, 'host') is not None
-        'ipv4': lambda x: rfc3987.match(x, 'IPv4address') is not None
-        'ipv6': lambda x: rfc3987.match(x, 'IPv6address') is not None
-        'uri': lambda x: rfc3987.match(x, 'URI') is not None
+        'hostname': lambda x: rfc3987.match(x, 'host') is not None,
+        'ipv4': lambda x: rfc3987.match(x, 'IPv4address') is not None,
+        'ipv6': lambda x: rfc3987.match(x, 'IPv6address') is not None,
+        'uri': lambda x: rfc3987.match(x, 'URI') is not None,
         'uriref': lambda x: rfc3987.match(x, 'URI_reference') is not None
     }
 
@@ -209,7 +209,7 @@ class JSONArray(JSONBase):
         if self._patternProperties:
             for pattern in self._patternProperties:
                 if self._pattern_matches(pattern, value):
-                    keys.remove(key)
+                    keys.remove(value)
         return keys
 
     def validate(self, value):
@@ -223,7 +223,7 @@ class JSONArray(JSONBase):
             self.items(value),
         )
 
-    def items(self, value)
+    def items(self, value):
         """
         items and additionalItems
         MUST be a valid JSON Schema.
@@ -339,7 +339,7 @@ class JSONObject(JSONBase):
         if self._patternProperties:
             for pattern in self._patternProperties:
                 if self._pattern_matches(pattern, value):
-                    keys.remove(key)
+                    keys.remove(value)
         return keys
 
     def _pattern_matches(self, pattern, value):
@@ -360,7 +360,7 @@ class JSONObject(JSONBase):
 
     def properties(self, value):
         if self._properties is not None:
-            for key, rule in self._properties.items()
+            for key, rule in self._properties.items():
                 rule.validate(getattr(value, key))
 
     def patternProperties(self, value):
@@ -525,6 +525,51 @@ def main():
     }
     Bar = create_class_from_spec('Bar', bar_attrs)
     print_class(Bar)
+
+    baz_attrs = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "id": "/",
+        "type": "object",
+        "properties": {
+            "order": {
+                "id": "order",
+                "type": "string"
+            },
+            "customer": {
+                "id": "customer",
+                "type": "string"
+            },
+            "item": {
+                "id": "item",
+                "type": "string",
+                "default": "hello"
+            },
+            "ship_via": {
+                "id": "ship_via",
+                "type": "string"
+            },
+            "invoice_total": {
+                "id": "invoice_total",
+                "type": "string"
+            },
+            "shipped": {
+                "id": "shipped",
+                "type": "integer"
+            },
+            "tracking_number": {
+                "id": "tracking_number",
+                "type": "string"
+            },
+            "tracking_link": {
+                "id": "tracking_link",
+                "type": "string"
+            }
+        },
+        "additionalProperties": False
+    }
+
+    Baz = ObjectMaker.create_class_from_json_schema('Baz', baz_attrs)
+    print_class(Baz)
 
 if __name__ == '__main__':
     main()
