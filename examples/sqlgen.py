@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
-from valid_model.base import ObjectMeta, Object, Generic
+
+from valid_model.base import Generic, Object, ObjectMeta
 
 
 def flatten(l):
@@ -48,7 +49,11 @@ class Select(SQLBase):
         seen = set()
         columns = []
         for c in self._columns:
-            c_str = unicode(c if not isinstance(c, Generic) else c.extra['name'])
+            c_str = unicode(
+                c
+                if not isinstance(c, Generic)
+                else c.extra['name']
+            )
             for part in c_str.split(", "):
                 if part not in seen:
                     columns.append(part)
@@ -90,13 +95,21 @@ class Where(SQLBase):
         return self
 
     def __unicode__(self):
-        return " ".join(["({})".format(" ".join([unicode(e) for e in self._expressions]))])
+        return " ".join([
+            "({})".format(
+                " ".join([unicode(e) for e in self._expressions])
+            )
+        ])
 
     def __str__(self):
         return self.__unicode__().encode('utf-8')
 
     def values(self):
-        return flatten(e.values() for e in self._expressions if not isinstance(e, basestring))
+        return flatten(
+            e.values()
+            for e in self._expressions
+            if not isinstance(e, basestring)
+        )
 
 
 class Expression(SQLBase):
@@ -182,7 +195,9 @@ class SQLObjectMeta(ObjectMeta):
         value.extra['name'] = attr_name
 
     def __unicode__(self):
-        return ", ".join(getattr(self, f).extra['name'] for f in self.field_names)
+        return ", ".join(
+            getattr(self, f).extra['name'] for f in self.field_names
+        )
 
     def __str__(self):
         return self.__unicode__().encode('utf-8')
@@ -219,7 +234,10 @@ def main():
     foo = Select(
         Car, Manufacturer
     ).from_(
-        From('test_cars').join('test_manufacturer', Expression(Car.model, 'STARTSWITH', Manufacturer.make))
+        From('test_cars').join(
+            'test_manufacturer',
+            Expression(Car.model, 'STARTSWITH', Manufacturer.make)
+        )
     ).where(
         Where(
             Where(
