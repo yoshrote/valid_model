@@ -7,13 +7,14 @@ setup(name='valid_model',
 """,
       classifiers=[
             'Intended Audience :: Developers',
-            'License :: OSI Approved :: MIT License'
+            'License :: OSI Approved :: MIT License',
+            'Programming Language :: Python :: 2.7'
       ],
       keywords='',
       author='Joshua Forman',
-      author_email='jforman@outbrain.com',
-      url='http://www.outbrain.com/',
-      license='',
+      author_email='josh@yoshrote.com',
+      url='https://github.com/yoshrote/valid_model',
+      license='MIT',
       packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
       include_package_data=True,
       zip_safe=False,
