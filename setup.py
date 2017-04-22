@@ -21,9 +21,6 @@ setup(name='valid_model',
       install_requires=[
             'six'
       ],
-      tests_require=[
-            'pytest'
-      ],
       entry_points="""
       # -*- Entry points: -*-
       """,
