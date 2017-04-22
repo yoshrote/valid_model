@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 def is_descriptor(obj):
     return all((
         hasattr(obj, 'name'),

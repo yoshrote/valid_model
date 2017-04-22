@@ -20,9 +20,14 @@ validator.
 Each Object also has a validate method which can check conditions that deal with
 multiple attributes within an Object.
 """
+from __future__ import unicode_literals
+
+import six
+
 from .exc import ValidationError
 
 
+@six.python_2_unicode_compatible
 class Generic(object):
     """
     Base descriptor class for all valid_model descriptors.
@@ -72,7 +77,7 @@ class Generic(object):
         elif value is not None:
             try:
                 value = self.mutator(value)
-            except (TypeError, ValueError, ValidationError), ex:
+            except (TypeError, ValueError, ValidationError) as ex:
                 raise ValidationError("{}: {}".format(self.name, ex))
             if not self.validator(value):
                 raise ValidationError(self.name)
@@ -93,7 +98,7 @@ class ObjectMeta(type):
     """
     def __new__(mcs, name, bases, attrs):
         field_names = set()
-        for attr, value in attrs.iteritems():
+        for attr, value in six.iteritems(attrs):
             if isinstance(value, Generic):
                 value.name = attr
                 attrs[attr] = value
@@ -101,7 +106,7 @@ class ObjectMeta(type):
 
         for base in bases:
             parent = base.__mro__[0]
-            for attr, value in vars(parent).iteritems():
+            for attr, value in six.iteritems(vars(parent)):
                 if isinstance(value, Generic) and attr not in attrs:
                     value.name = attr
                     attrs[attr] = value
@@ -110,11 +115,12 @@ class ObjectMeta(type):
         return type.__new__(mcs, name, bases, attrs)
 
 
+@six.python_2_unicode_compatible
+@six.add_metaclass(ObjectMeta)
 class Object(object):
     """
     Base class for creating object models
     """
-    __metaclass__ = ObjectMeta
     field_names = None  # stub gets set in ObjectMeta.__new__
 
     def __init__(self, **kwargs):
@@ -134,7 +140,7 @@ class Object(object):
         Convert the Object instance and any nested Objects into a dict.
         """
         json_doc = {}
-        for key, value in self._fields.iteritems():
+        for key, value in six.iteritems(self._fields):
             if hasattr(value, '__json__'):
                 json_doc[key] = value.__json__()
             elif isinstance(value, list):
@@ -145,7 +151,7 @@ class Object(object):
             elif isinstance(value, dict):
                 json_doc[key] = dict(
                     (k, v.__json__()) if hasattr(v, '__json__') else (k, v)
-                    for k, v in value.iteritems()
+                    for k, v in six.iteritems(value)
                 )
             else:
                 json_doc[key] = value
@@ -156,7 +162,7 @@ class Object(object):
         """
         Update attributes from a dict-like object
         """
-        for key, value in doc.iteritems():
+        for key, value in six.iteritems(doc):
             if key in self._fields:
                 setattr(self, key, value)
 
@@ -166,7 +172,7 @@ class Object(object):
         """
         for key in self._fields:
             setattr(self, key, self._fields[key])
-        for key, value in self._fields.iteritems():
+        for key, value in six.iteritems(self._fields):
             if hasattr(value, 'validate'):
                 value.validate()
             elif isinstance(value, list):
