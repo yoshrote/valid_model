@@ -1,4 +1,7 @@
+from __future__ import unicode_literals
 import unittest
+
+import six
 
 
 class TestValidationError(unittest.TestCase):
@@ -7,16 +10,12 @@ class TestValidationError(unittest.TestCase):
         return ValidationError(msg, field=field)
 
     def test___str__(self):
-        self.assertEquals(str(self._make_one('foo')), 'foo')
-        self.assertEquals(str(self._make_one('foo', 'bar')), 'bar: foo')
-
-    def test___unicode__(self):
-        self.assertEquals(unicode(self._make_one('foo')), u'foo')
-        self.assertEquals(unicode(self._make_one('foo', 'bar')), u'bar: foo')
+        self.assertEqual(six.text_type(self._make_one('foo')), 'foo')
+        self.assertEqual(six.text_type(self._make_one('foo', 'bar')), 'bar: foo')
 
     def test___repr__(self):
-        self.assertEquals(repr(self._make_one('foo')), "ValidationError('foo', None)")
-        self.assertEquals(repr(self._make_one('foo', 'bar')), "ValidationError('foo', 'bar')")
+        self.assertEqual(repr(self._make_one('foo')), "ValidationError('foo', None)")
+        self.assertEqual(repr(self._make_one('foo', 'bar')), "ValidationError('foo', 'bar')")
 
 
 class TestObject(unittest.TestCase):
@@ -120,13 +119,13 @@ class TestObject(unittest.TestCase):
         instance = Foo(basic='test')
 
         # simple attribute
-        self.assertEquals(instance.basic, 'test')
+        self.assertEqual(instance.basic, 'test')
 
         # attributed with default value
-        self.assertEquals(instance.default, 5)
+        self.assertEqual(instance.default, 5)
 
         # attributed with callable default value
-        self.assertEquals(instance.called_default, 'hello')
+        self.assertEqual(instance.called_default, 'hello')
 
         # field_names was populated by the metaclass properly
         self.assertSetEqual(
@@ -146,7 +145,7 @@ class TestObject(unittest.TestCase):
 
         # update
         instance.update({'default': 300})
-        self.assertEquals(instance.default, 300)
+        self.assertEqual(instance.default, 300)
 
     def test_scoping(self):
         # test that values are being assigned to instance and not class
@@ -154,8 +153,8 @@ class TestObject(unittest.TestCase):
         instance1 = Foo()
         instance2 = Foo()
         instance1.basic = 100
-        self.assertNotEquals(instance2.basic, 100)
-        self.assertNotEquals(Foo.basic, 100)
+        self.assertNotEqual(instance2.basic, 100)
+        self.assertNotEqual(Foo.basic, 100)
 
     def test_validate(self):
         from valid_model import ValidationError
@@ -168,7 +167,7 @@ class TestObject(unittest.TestCase):
     def test_inheritance(self):
         Foo = self._make_inherited()
         instance = Foo()
-        self.assertEquals(instance.default, 10)
+        self.assertEqual(instance.default, 10)
         self.assertSetEqual(
             instance.field_names,
             {'basic', 'default', 'called_default', 'new_attr'}
@@ -182,21 +181,21 @@ class TestObject(unittest.TestCase):
         # test initization from dict
         Foo, Bar = self._make_nested()
         instance = Foo(embedded={'t1': 20})
-        self.assertEquals(instance.embedded.t1, 20)
+        self.assertEqual(instance.embedded.t1, 20)
 
         # test initization from Object
         instance2 = Foo(embedded=Bar(t1=20))
-        self.assertEquals(instance2.embedded.t1, 20)
+        self.assertEqual(instance2.embedded.t1, 20)
 
         # test update from dict
         instance2.update({'embedded': {'t2': 80}})
-        self.assertEquals(instance2.embedded.t2, 80)
+        self.assertEqual(instance2.embedded.t2, 80)
 
         # test update from Object
         instance.update({'embedded': Bar(t2=80)})
-        self.assertEquals(instance.embedded.t2, 80)
+        self.assertEqual(instance.embedded.t2, 80)
         # default values overwrite old values too
-        self.assertEquals(instance.embedded.t1, None)
+        self.assertEqual(instance.embedded.t1, None)
 
         self.assertDictEqual(
             instance.__json__(),
@@ -214,21 +213,21 @@ class TestObject(unittest.TestCase):
         # test initization from list of dict
         Foo, Bar = self._make_list()
         instance = Foo(embedded=[{'t1': 20}])
-        self.assertEquals(instance.embedded[0].t1, 20)
+        self.assertEqual(instance.embedded[0].t1, 20)
 
         # test initization from list of Object
         instance2 = Foo(embedded=[Bar(t1=20)])
-        self.assertEquals(instance2.embedded[0].t1, 20)
+        self.assertEqual(instance2.embedded[0].t1, 20)
 
         # test update from list of dict
         instance2.update({'embedded': [{'t2': 80}]})
-        self.assertEquals(instance2.embedded[0].t2, 80)
+        self.assertEqual(instance2.embedded[0].t2, 80)
 
         # test update from list of Object
         instance.update({'embedded': [Bar(t2=80)]})
-        self.assertEquals(instance.embedded[0].t2, 80)
+        self.assertEqual(instance.embedded[0].t2, 80)
         # default values overwrite old values too
-        self.assertEquals(instance.embedded[0].t1, None)
+        self.assertEqual(instance.embedded[0].t1, None)
 
         self.assertDictEqual(
             instance.__json__(),
@@ -244,12 +243,12 @@ class TestObject(unittest.TestCase):
 
     def test_descriptor_name(self):
         Foo = self._make_one()
-        self.assertEquals(str(Foo.basic), 'basic')
+        self.assertEqual(str(Foo.basic), 'basic')
 
     def test___str__(self):
         Foo = self._make_one()
         instance = Foo(basic='test')
-        self.assertEquals(str(instance), str(instance.__json__()))
+        self.assertEqual(str(instance), str(instance.__json__()))
 
     def test___json__(self):
         Foo = self._make_dict()
@@ -276,9 +275,9 @@ class TestGeneric(unittest.TestCase):
 
     def test___delete__(self):
         instance = self._make_one(5)
-        self.assertEquals(instance.test, 5)
+        self.assertEqual(instance.test, 5)
         del instance.test
-        self.assertEquals(instance.test, None)
+        self.assertEqual(instance.test, None)
 
     def test___set___validator(self):
         from valid_model import ValidationError
@@ -313,7 +312,7 @@ class TestEmbeddedObject(unittest.TestCase):
     def test___delete__(self):
         instance = self._make_one()
         del instance.test
-        self.assertEquals(instance.test, None)
+        self.assertEqual(instance.test, None)
 
 
 class TestObjectList(unittest.TestCase):
@@ -335,7 +334,7 @@ class TestObjectList(unittest.TestCase):
     def test___delete__(self):
         instance = self._make_one()
         del instance.test
-        self.assertEquals(instance.test, None)
+        self.assertEqual(instance.test, None)
 
 
 class TestObjectDict(unittest.TestCase):
@@ -374,53 +373,7 @@ class TestObjectDict(unittest.TestCase):
     def test___delete__(self):
         instance = self._make_one()
         del instance.test
-        self.assertEquals(instance.test, None)
-
-
-class TestOldObjectList(unittest.TestCase):
-    @staticmethod
-    def _make_one(mutator=None):
-        from valid_model.descriptors import ObjectList
-        from valid_model import Object
-
-        class Foo(Object):
-            test = ObjectList(Object)
-        return Foo()
-
-    def test___set___validator(self):
-        from valid_model import ValidationError
-        instance = self._make_one()
-        self.assertRaises(ValidationError, setattr, instance, 'test', 10)
-        self.assertRaises(ValidationError, setattr, instance, 'test', [10])
-
-    def test___delete__(self):
-        instance = self._make_one()
-        del instance.test
-        self.assertEquals(instance.test, None)
-
-
-class TestOldObjectDict(unittest.TestCase):
-    @staticmethod
-    def _make_one(mutator=None):
-        from valid_model.descriptors import ObjectDict
-        from valid_model import Object
-
-        class Foo(Object):
-            test = ObjectDict(Object)
-        return Foo()
-
-    def test___set___validator(self):
-        from valid_model import ValidationError
-        instance = self._make_one()
-        nested_instance = self._make_one()
-        self.assertRaises(ValidationError, setattr, instance, 'test', 10)
-        self.assertRaises(ValidationError, setattr, instance, 'test', {'foo': 10})
-        instance.test = {'foo': nested_instance}
-
-    def test___delete__(self):
-        instance = self._make_one()
-        del instance.test
-        self.assertEquals(instance.test, None)
+        self.assertEqual(instance.test, None)
 
 
 class TestString(unittest.TestCase):
@@ -436,9 +389,9 @@ class TestString(unittest.TestCase):
     def test___set___validator(self):
         from valid_model import ValidationError
         instance = self._make_one()
-        instance.test = u'hello'
-        instance.test = 'hello'
-        self.assertTrue(isinstance(instance.test, unicode))
+        instance.test = six.u('hello')
+        instance.test = six.b('hello')
+        self.assertTrue(isinstance(instance.test, six.text_type))
         self.assertRaises(ValidationError, setattr, instance, 'test', 10)
 
 
@@ -458,11 +411,11 @@ class TestInteger(unittest.TestCase):
         from valid_model import ValidationError
         instance = self._make_one()
         instance.test = 5
-        self.assertEquals(instance.test, 5)
+        self.assertEqual(instance.test, 5)
         instance.test = 3.5
-        self.assertEquals(instance.test, 3)
+        self.assertEqual(instance.test, 3)
         instance.test = None
-        self.assertEquals(instance.test, None)
+        self.assertEqual(instance.test, None)
         self.assertRaises(ValidationError, setattr, instance, 'test', True)
         self.assertRaises(ValidationError, setattr, instance, 'test', 'hello')
         self.assertRaises(ValidationError, setattr, instance, 'test', '15')
@@ -482,11 +435,11 @@ class TestFloat(unittest.TestCase):
         from valid_model import ValidationError
         instance = self._make_one()
         instance.test = 5.0
-        self.assertEquals(instance.test, 5.0)
+        self.assertEqual(instance.test, 5.0)
         instance.test = 10
-        self.assertEquals(instance.test, 10.0)
+        self.assertEqual(instance.test, 10.0)
         instance.test = None
-        self.assertEquals(instance.test, None)
+        self.assertEqual(instance.test, None)
         self.assertRaises(ValidationError, setattr, instance, 'test', True)
         self.assertRaises(ValidationError, setattr, instance, 'test', 'hello')
         self.assertRaises(ValidationError, setattr, instance, 'test', '15')
@@ -505,13 +458,13 @@ class TestBool(unittest.TestCase):
     def test___set___validator(self):
         from valid_model import ValidationError
         instance = self._make_one()
-        self.assertEquals(instance.test, None)
+        self.assertEqual(instance.test, None)
         instance.test = True
-        self.assertEquals(instance.test, True)
+        self.assertEqual(instance.test, True)
         instance.test = False
-        self.assertEquals(instance.test, False)
+        self.assertEqual(instance.test, False)
         instance.test = None
-        self.assertEquals(instance.test, None)
+        self.assertEqual(instance.test, None)
         instance.test = 0
         self.assertIs(instance.test, False)
         instance.test = 1
@@ -538,7 +491,7 @@ class TestDateTime(unittest.TestCase):
         instance = self._make_one()
         today = datetime.utcnow()
         instance.test = today
-        self.assertEquals(instance.test, today)
+        self.assertEqual(instance.test, today)
         self.assertRaises(ValidationError, setattr, instance, 'test', 10)
 
 
@@ -560,7 +513,7 @@ class TestTimeDelta(unittest.TestCase):
         instance = self._make_one()
         one_minute = timedelta(minutes=1)
         instance.test = one_minute
-        self.assertEquals(instance.test, one_minute)
+        self.assertEqual(instance.test, one_minute)
         self.assertRaises(ValidationError, setattr, instance, 'test', 10)
 
 
@@ -586,7 +539,7 @@ class TestList(unittest.TestCase):
     def test_none(self):
         instance = self._make_one()
         instance.test = None
-        self.assertEquals(instance.test, [])
+        self.assertEqual(instance.test, [])
 
 
 class TestSet(unittest.TestCase):
@@ -608,7 +561,7 @@ class TestSet(unittest.TestCase):
     def test___delete__(self):
         instance = self._make_one()
         del instance.test
-        self.assertEquals(instance.test, None)
+        self.assertEqual(instance.test, None)
 
     def test_invalid_descriptor(self):
         self.assertRaises(TypeError, self._make_one, value=5)
@@ -623,7 +576,7 @@ class TestSet(unittest.TestCase):
     def test_none(self):
         instance = self._make_one()
         instance.test = None
-        self.assertEquals(instance.test, set())
+        self.assertEqual(instance.test, set())
 
 
 class TestDict(unittest.TestCase):
@@ -651,7 +604,7 @@ class TestDict(unittest.TestCase):
     def test_none(self):
         instance = self._make_one()
         instance.test = None
-        self.assertEquals(instance.test, {})
+        self.assertEqual(instance.test, {})
 
 
 class TestDescriptorFuncs(unittest.TestCase):
@@ -660,9 +613,9 @@ class TestDescriptorFuncs(unittest.TestCase):
         descriptors_list = descriptors()
         descriptor_cls_list = descriptor_classes()
         for cls in descriptor_cls_list:
-            self.assert_(cls.__name__ in descriptors_list)
+            self.assertTrue(cls.__name__ in descriptors_list)
             descriptors_list.remove(cls.__name__)
-        self.assertEquals(len(descriptors_list), 0)
+        self.assertEqual(len(descriptors_list), 0)
 
 
 class TestValidators(unittest.TestCase):

@@ -19,7 +19,7 @@ setup(name='valid_model',
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          # -*- Extra requirements: -*-
+            'six'
       ],
       entry_points="""
       # -*- Entry points: -*-

@@ -1,6 +1,8 @@
 import warnings
 from datetime import datetime, timedelta
 
+import six
+
 from .base import Generic, Object
 from .exc import ValidationError
 from .utils import is_descriptor
@@ -35,10 +37,10 @@ class String(Generic):
         )
 
     def __set__(self, instance, value):
-        if value is None or isinstance(value, unicode):
+        if value is None or isinstance(value, six.text_type):
             pass
-        elif isinstance(value, str):
-            value = unicode(value, 'utf-8')
+        elif isinstance(value, six.binary_type):
+            value = value.decode('utf-8')
         else:
             raise ValidationError("{!r} is not a string".format(value), self.name)
         return Generic.__set__(self, instance, value)
@@ -56,7 +58,7 @@ class Integer(Generic):
 
     def __set__(self, instance, value):
         if value is not None:
-            if not isinstance(value, (int, long, float)) or isinstance(value, bool):
+            if not isinstance(value, (six.integer_types, float)) or isinstance(value, bool):
                 raise ValidationError("{!r} is not an int".format(value), self.name)
             else:
                 value = int(value)
@@ -75,7 +77,7 @@ class Float(Generic):
 
     def __set__(self, instance, value):
         if value is not None:
-            if not isinstance(value, (int, long, float)) or isinstance(value, bool):
+            if not isinstance(value, (six.integer_types, float)) or isinstance(value, bool):
                 raise ValidationError("{!r} is not a float".format(value), self.name)
             else:
                 value = float(value)
@@ -207,7 +209,7 @@ class Dict(Generic):
             raise ValidationError("{!r} is not a dict".format(value), self.name)
         new_value = {}
         dummy = Object()
-        for k, v in value.iteritems():
+        for k, v in six.iteritems(value):
             if self.key is not None:
                 try:
                     k = self.key.__set__(dummy, k)
@@ -222,34 +224,16 @@ class Dict(Generic):
         return Generic.__set__(self, instance, new_value)
 
 
-class ObjectList(List):
-    def __init__(self, class_obj, mutator=None):
-        List.__init__(
-            self, value=EmbeddedObject(class_obj), mutator=mutator
-        )
-        self.class_obj = class_obj
-        warnings.warn("ObjectList(class_obj) should be replaced with List(value=EmbeddedObject(class_obj))", DeprecationWarning)
-
-
-class ObjectDict(Dict):
-    def __init__(self, class_obj, mutator=None):
-        Dict.__init__(
-            self, value=EmbeddedObject(class_obj), mutator=mutator
-        )
-        self.class_obj = class_obj
-        warnings.warn("ObjectDict(class_obj) should be replaced with Dict(value=EmbeddedObject(class_obj))", DeprecationWarning)
-
-
 def descriptors():
     return [
-        name for name, value in globals().iteritems()
+        name for name, value in six.iteritems(globals())
         if is_descriptor(value) and issubclass(value, Generic)
     ]
 
 
 def descriptor_classes():
     return [
-        value for value in globals().itervalues()
+        value for value in six.itervalues(globals())
         if is_descriptor(value) and issubclass(value, Generic)
     ]
 
