@@ -14,8 +14,13 @@ class TestValidationError(unittest.TestCase):
         self.assertEqual(six.text_type(self._make_one('foo', 'bar')), 'bar: foo')
 
     def test___repr__(self):
-        self.assertEqual(repr(self._make_one('foo')), "ValidationError('foo', None)")
-        self.assertEqual(repr(self._make_one('foo', 'bar')), "ValidationError('foo', 'bar')")
+        unicode_prefix = six.PY2
+        self.assertEqual(
+            repr(self._make_one('foo')), 
+            "ValidationError({}'foo', None)".format('u' if six.PY2 else ''))
+        self.assertEqual(
+            repr(self._make_one('foo', 'bar')), 
+            "ValidationError({0}'foo', {0}'bar')".format('u' if six.PY2 else ''))
 
 
 class TestObject(unittest.TestCase):
@@ -389,8 +394,8 @@ class TestString(unittest.TestCase):
     def test___set___validator(self):
         from valid_model import ValidationError
         instance = self._make_one()
-        instance.test = six.u('hello')
-        instance.test = six.b('hello')
+        instance.test = 'hello'
+        instance.test = 'hello'.encode('utf-8')
         self.assertTrue(isinstance(instance.test, six.text_type))
         self.assertRaises(ValidationError, setattr, instance, 'test', 10)
 
