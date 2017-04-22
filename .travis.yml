@@ -10,4 +10,4 @@ python:
 # command to install dependencies
 install: "python setup.py install"
 # command to run tests
-script: "python tests.py"
+script: "pytest tests.py"
