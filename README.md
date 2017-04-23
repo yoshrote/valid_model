@@ -1,6 +1,8 @@
 valid_model
 ===========
 
+[![Build Status](https://travis-ci.org/yoshrote/valid_model.svg?branch=master)](https://travis-ci.org/yoshrote/valid_model)
+
 The valid_model library is intended to allow declarative modeling of an object schema in a similar way to various ORM and form validation libraries while making as few assumptions as possible about the way it will be used.
 
 Attributes in a `valid_model.Object` instance are guaranteed to have all fields exist with defined restrictions and defaults available. In addition each field can have a mutator function applied to it to enforce uniformity.  An example of this could be make a `String` attribute always be uppercase.

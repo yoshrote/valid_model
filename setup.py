@@ -1,14 +1,19 @@
 from setuptools import setup, find_packages
 
 setup(name='valid_model',
-      version='0.3.6',
+      version='0.4.0',
       description="Generic data modeling and validation",
       long_description="""\
 """,
       classifiers=[
             'Intended Audience :: Developers',
             'License :: OSI Approved :: MIT License',
-            'Programming Language :: Python :: 2.7'
+            'Programming Language :: Python :: 2.7',
+            'Programming Language :: Python :: 3.2',
+            'Programming Language :: Python :: 3.3',
+            'Programming Language :: Python :: 3.4',
+            'Programming Language :: Python :: 3.5',
+            'Programming Language :: Python :: 3.6',
       ],
       keywords='',
       author='Joshua Forman',
