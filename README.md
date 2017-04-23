@@ -1,7 +1,7 @@
 valid_model
 ===========
 
-[![Build Status](https://travis-ci.org/yoshrote/valid_model.svg?branch=master)](https://travis-ci.org/yoshrote/valid_model)
+[![Build Status](https://travis-ci.org/yoshrote/valid_model.svg?branch=master)](https://travis-ci.org/yoshrote/valid_model) [![Coverage Status](https://coveralls.io/repos/github/yoshrote/valid_model/badge.svg?branch=master)](https://coveralls.io/github/yoshrote/valid_model?branch=master)
 
 The valid_model library is intended to allow declarative modeling of an object schema in a similar way to various ORM and form validation libraries while making as few assumptions as possible about the way it will be used.
 
