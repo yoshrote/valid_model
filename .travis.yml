@@ -6,7 +6,10 @@ python:
   - "3.4"
   - "3.5"
   - "3.6"
-# command to install dependencies
+before_script:
+  - "pip install pytest pytest-cov python-coveralls"
 install: "pip install ."
 # command to run tests
-script: "python tests.py"
+script: "py.test --cov valid_model --cov-report term-missing tests.py"
+after_success:
+  - "coveralls"
