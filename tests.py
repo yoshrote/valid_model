@@ -344,7 +344,7 @@ class TestObjectList(unittest.TestCase):
 
 class TestObjectDict(unittest.TestCase):
     @staticmethod
-    def _make_one(mutator=None):
+    def _make_with_value(mutator=None):
         from valid_model.descriptors import EmbeddedObject, Dict
         from valid_model import Object
 
@@ -353,7 +353,7 @@ class TestObjectDict(unittest.TestCase):
         return Foo()
 
     @staticmethod
-    def _make_two(mutator=None):
+    def _make_with_key(mutator=None):
         from valid_model.descriptors import Dict, Integer
         from valid_model import Object
 
@@ -363,20 +363,20 @@ class TestObjectDict(unittest.TestCase):
 
     def test___set___validator(self):
         from valid_model import ValidationError
-        instance = self._make_one()
-        nested_instance = self._make_one()
+        instance = self._make_with_value()
+        nested_instance = self._make_with_value()
         self.assertRaises(ValidationError, setattr, instance, 'test', 10)
         self.assertRaises(ValidationError, setattr, instance, 'test', {'foo': 10})
         instance.test = {'foo': nested_instance}
 
-        instance2 = self._make_two()
+        instance2 = self._make_with_key()
         self.assertRaises(ValidationError, setattr, instance2, 'test', 10)
         self.assertRaises(ValidationError, setattr, instance2, 'test', {'abc': 10})
         self.assertRaises(ValidationError, setattr, instance2, 'test', {2: 10})
         instance2.test[8] = 5
 
     def test___delete__(self):
-        instance = self._make_one()
+        instance = self._make_with_value()
         del instance.test
         self.assertEqual(instance.test, None)
 
