@@ -5,7 +5,8 @@ import six
 
 
 class TestValidationError(unittest.TestCase):
-    def _make_one(self, msg, field=None):
+    @staticmethod
+    def _make_one(msg, field=None):
         from valid_model import ValidationError
         return ValidationError(msg, field=field)
 
@@ -14,17 +15,17 @@ class TestValidationError(unittest.TestCase):
         self.assertEqual(six.text_type(self._make_one('foo', 'bar')), 'bar: foo')
 
     def test___repr__(self):
-        unicode_prefix = six.PY2
         self.assertEqual(
-            repr(self._make_one('foo')), 
+            repr(self._make_one('foo')),
             "ValidationError({}'foo', None)".format('u' if six.PY2 else ''))
         self.assertEqual(
-            repr(self._make_one('foo', 'bar')), 
+            repr(self._make_one('foo', 'bar')),
             "ValidationError({0}'foo', {0}'bar')".format('u' if six.PY2 else ''))
 
 
 class TestObject(unittest.TestCase):
-    def _make_one(self):
+    @staticmethod
+    def _make_one():
         from valid_model import Object, ValidationError
         from valid_model.descriptors import Generic
 
@@ -38,7 +39,8 @@ class TestObject(unittest.TestCase):
                     raise ValidationError('bad stuff')
         return Foo
 
-    def _make_inherited(self):
+    @staticmethod
+    def _make_inherited():
         from valid_model import Object, ValidationError
         from valid_model.descriptors import Generic
 
@@ -58,7 +60,8 @@ class TestObject(unittest.TestCase):
 
         return Foo
 
-    def _make_nested(self):
+    @staticmethod
+    def _make_nested():
         from valid_model import Object, ValidationError
         from valid_model.descriptors import Generic, EmbeddedObject
 
@@ -83,7 +86,8 @@ class TestObject(unittest.TestCase):
 
         return Foo, Bar
 
-    def _make_list(self):
+    @staticmethod
+    def _make_list():
         from valid_model import Object, ValidationError
         from valid_model.descriptors import Generic, List, EmbeddedObject
 
@@ -108,7 +112,8 @@ class TestObject(unittest.TestCase):
 
         return Foo, Bar
 
-    def _make_dict(self):
+    @staticmethod
+    def _make_dict():
         from valid_model import Object
         from valid_model.descriptors import Generic, Dict
 

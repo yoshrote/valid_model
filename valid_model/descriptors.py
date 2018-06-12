@@ -135,7 +135,7 @@ NO_DEFAULT = object()
 class _Collection(Generic):
     _collection_type = object
     _collection_label = None
-    
+
     def __init__(self, default=NO_DEFAULT, value=None, validator=None, mutator=None):
         if default is NO_DEFAULT:
             default = self._collection_type
@@ -146,7 +146,8 @@ class _Collection(Generic):
             raise TypeError('value must be None or an instance of Generic')
         self.value = value
 
-    def iterate(self, collection):
+    @staticmethod
+    def iterate(collection):
         return iter(collection)
 
     def recursive_validation(self, element):
@@ -213,7 +214,8 @@ class Dict(_Collection):
             raise TypeError('key must be None or an instance of Generic')
         self.key = key
 
-    def iterate(self, collection):
+    @staticmethod
+    def iterate(collection):
         return six.iteritems(collection)
 
     def recursive_validation(self, element):

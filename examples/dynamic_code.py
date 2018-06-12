@@ -1,6 +1,7 @@
 """
 Generate classes from a specification and generate the class declaration code
 """
+import ast
 from datetime import datetime, timedelta
 import inspect
 from valid_model.base import Object, ObjectMeta
@@ -51,7 +52,8 @@ class ObjectPrinter(object):
 
     @classmethod
     def print_class(cls, klass):
-        assert issubclass(klass, Object)
+        if not issubclass(klass, Object):
+            raise TypeError("expected subclass of `Object`")
         print 'class {}(Object):'.format(klass.__name__)
         for attr_name, descriptor in inspect.getmembers(klass, lambda x: isinstance(x, Generic)):
             print '\t{} = {}(\n{}\n\t)'.format(attr_name, descriptor.__class__.__name__, cls.attr_definition(descriptor))
@@ -74,7 +76,7 @@ class ObjectMaker(object):
     DEFAULT_MAP = {
         'string': unicode,
         'integer': int,
-        'boolean': lambda x: eval(x.lower()), # TODO: This is bad
+        'boolean': lambda x: ast.literal_eval(x.lower()),
         'datetime': lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S'),
         'timedelta': lambda x: timedelta(seconds=float(x)),
         'map': lambda x: x,
